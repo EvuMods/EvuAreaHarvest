@@ -1,0 +1,9 @@
+{
+    "name": "EvuAreaHarvest",
+    "description": "Harvest everything in an area with a simple hotkey, even things planted under the ground",
+    "version_number": "0.1.0",
+    "website_url": "https://github.com/EvuMods/EvuAreaHarvest",
+    "dependencies": [
+        "ValheimModding-Jotunn-2.30.2"
+    ]
+}
