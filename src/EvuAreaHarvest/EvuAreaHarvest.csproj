@@ -17,10 +17,6 @@
       <HintPath>$(BepInExCore)/BepInEx.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="0Harmony">
-      <HintPath>$(BepInExCore)/0Harmony.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
     <Reference Include="Jotunn">
       <HintPath>$(JotunnLib)/Jotunn.dll</HintPath>
       <Private>false</Private>
@@ -36,10 +32,6 @@
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
       <HintPath>$(ValheimManaged)/UnityEngine.PhysicsModule.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="assembly_utils">
-      <HintPath>$(ValheimManaged)/assembly_utils.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine" Condition="Exists('$(ValheimManaged)/UnityEngine.dll')">

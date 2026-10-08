@@ -27,7 +27,7 @@ internal sealed class HarvestMarkers
         }
     }
 
-    public void Show(IReadOnlyList<HarvestTarget> spots, float hintY)
+    public void Show(IReadOnlyList<HarvestTarget> spots)
     {
         for (var i = 0; i < spots.Count; i++)
         {
@@ -35,7 +35,8 @@ internal sealed class HarvestMarkers
             var color = spot.Ready
                 ? new Color(0.95f, 0.78f, 0.15f, 0.95f)
                 : new Color(0.55f, 0.42f, 0.12f, 0.4f);
-            GroundLine.Circle(Rent(i), spot.Position, Radius, color, Segments, hintY);
+            // The spot's own height is the hint, so a marker uphill or downhill from the player still finds its ground.
+            GroundLine.Circle(Rent(i), spot.Position, Radius, color, Segments, spot.Position.y);
         }
 
         for (var i = spots.Count; i < _pool.Count; i++)

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using EvuAreaHarvest.Core;
 using UnityEngine;
 
 namespace EvuAreaHarvest;
@@ -31,77 +30,160 @@ internal readonly struct HarvestTarget
 
 internal static class HarvestScan
 {
-    public static List<HarvestTarget> Collect(Vector3 origin)
+    /// <summary>
+    /// Whether a grown prefab of a <see cref="Plant"/> turns into something this mod can pick.
+    /// Tree saplings grow into trees, so they are not harvestables waiting.
+    /// </summary>
+    static readonly Dictionary<GameObject, bool> GrowsIntoPickable = new Dictionary<GameObject, bool>();
+
+    /// <summary>
+    /// Everything inside <paramref name="range"/> of <paramref name="origin"/> that is, or will become, a pickable.
+    /// Objects without a live ZNetView (placement ghosts, prefabs that are not in the world) are skipped.
+    /// </summary>
+    public static List<HarvestTarget> Collect(Vector3 origin, float range, bool pickGuarded)
     {
         var found = new List<HarvestTarget>();
-        var seen = new HashSet<int>();
+        var rangeSqr = range * range;
 
         foreach (var pickable in UnityEngine.Object.FindObjectsByType<Pickable>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
         {
-            if (pickable == null || pickable.m_itemPrefab == null || !seen.Add(pickable.gameObject.GetInstanceID()))
+            if (pickable == null || pickable.m_itemPrefab == null || !Live(pickable.m_nview) || pickable.m_enabled == 0)
+            {
+                continue;
+            }
+
+            if (!pickGuarded && pickable.m_aggravateRange > 0f)
             {
                 continue;
             }
 
             var position = pickable.transform.position;
+            var offset = position - origin;
+            if (offset.sqrMagnitude > rangeSqr)
+            {
+                continue;
+            }
+
             var captured = pickable;
             found.Add(new HarvestTarget(
                 position,
-                Vector3.Distance(origin, position),
+                offset.magnitude,
                 Ready(captured),
                 player => TryPick(captured, player)));
         }
 
         foreach (var item in UnityEngine.Object.FindObjectsByType<PickableItem>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
         {
-            if (item == null || item.m_itemPrefab == null || !seen.Add(item.gameObject.GetInstanceID()))
+            if (item == null || item.m_itemPrefab == null || !Live(item.m_nview))
             {
                 continue;
             }
 
             var position = item.transform.position;
+            var offset = position - origin;
+            if (offset.sqrMagnitude > rangeSqr)
+            {
+                continue;
+            }
+
             var captured = item;
             found.Add(new HarvestTarget(
                 position,
-                Vector3.Distance(origin, position),
-                item.m_nview != null && item.m_nview.IsValid() && !item.m_picked,
+                offset.magnitude,
+                !item.m_picked,
                 player => TryPickItem(captured, player)));
         }
 
         foreach (var plant in UnityEngine.Object.FindObjectsByType<Plant>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
         {
-            if (plant == null || !seen.Add(plant.gameObject.GetInstanceID()))
+            if (plant == null || !Live(plant.m_nview) || plant.m_status != Plant.Status.Healthy || !WillBePickable(plant))
             {
                 continue;
             }
 
             var position = plant.transform.position;
-            found.Add(new HarvestTarget(position, Vector3.Distance(origin, position), false, null));
+            var offset = position - origin;
+            if (offset.sqrMagnitude > rangeSqr)
+            {
+                continue;
+            }
+
+            found.Add(new HarvestTarget(position, offset.magnitude, false, null));
         }
 
         return found;
     }
 
-    static bool Ready(Pickable pickable)
+    static bool Live(ZNetView? view)
     {
-        return pickable.m_nview != null && pickable.m_nview.IsValid() && pickable.CanBePicked();
+        return view != null && view.IsValid();
     }
 
-    static bool TryPick(Pickable pickable, Player player)
+    static bool WillBePickable(Plant plant)
     {
-        if (pickable == null || !Ready(pickable))
+        var prefabs = plant.m_grownPrefabs;
+        if (prefabs == null)
         {
             return false;
         }
 
-        var before = pickable.m_pickedLocal;
+        for (var i = 0; i < prefabs.Length; i++)
+        {
+            var prefab = prefabs[i];
+            if (prefab == null)
+            {
+                continue;
+            }
+
+            if (!GrowsIntoPickable.TryGetValue(prefab, out var grows))
+            {
+                grows = prefab.GetComponentInChildren<Pickable>(true) != null;
+                GrowsIntoPickable[prefab] = grows;
+            }
+
+            if (grows)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    static bool Ready(Pickable pickable)
+    {
+        return Live(pickable.m_nview) && pickable.CanBePicked();
+    }
+
+    static bool StuckInTar(Pickable pickable)
+    {
+        if (!pickable.m_tarPreventsPicking)
+        {
+            return false;
+        }
+
+        var floating = pickable.GetComponent<Floating>();
+        return floating != null && floating.IsInTar();
+    }
+
+    /// <summary>
+    /// Sends Valheim's own pick for a pickable that is ready. The owner spawns the drops and
+    /// marks it picked, so success here means "the pick was issued", the same as a hand pick.
+    /// </summary>
+    static bool TryPick(Pickable pickable, Player player)
+    {
+        if (pickable == null || !Ready(pickable) || StuckInTar(pickable))
+        {
+            return false;
+        }
+
         pickable.Interact(player, false, false);
-        return pickable != null && pickable.m_pickedLocal && !before;
+        return true;
     }
 
     static bool TryPickItem(PickableItem item, Player player)
     {
-        if (item == null || item.m_picked || item.m_nview == null || !item.m_nview.IsValid())
+        if (item == null || item.m_picked || !Live(item.m_nview))
         {
             return false;
         }

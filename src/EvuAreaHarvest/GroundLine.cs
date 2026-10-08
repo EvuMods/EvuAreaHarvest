@@ -4,6 +4,11 @@ namespace EvuAreaHarvest;
 
 internal static class GroundLine
 {
+    /// <summary>How far above the sampled surface a line is drawn, to avoid z-fighting with the ground.</summary>
+    public const float Lift = 0.08f;
+
+    const float MinRadius = 0.05f;
+
     static Material? _material;
     static int _mask = int.MinValue;
 
@@ -28,9 +33,10 @@ internal static class GroundLine
         return line;
     }
 
+    /// <summary>Draws a ring on the ground around <paramref name="center"/>, sampling the surface at every segment.</summary>
     public static void Circle(LineRenderer line, Vector3 center, float radius, Color color, int segments, float hintY)
     {
-        if (radius <= 0.05f)
+        if (radius <= MinRadius)
         {
             line.positionCount = 0;
             return;
@@ -43,11 +49,21 @@ internal static class GroundLine
         for (var i = 0; i < segments; i++)
         {
             var angle = i / (float)segments * Mathf.PI * 2f;
-            var x = center.x + Mathf.Cos(angle) * radius;
-            var z = center.z + Mathf.Sin(angle) * radius;
-            var y = SurfaceY(x, z, hintY) + 0.08f;
+            var x = center.x + (Mathf.Cos(angle) * radius);
+            var z = center.z + (Mathf.Sin(angle) * radius);
+            var y = SurfaceY(x, z, hintY) + Lift;
             line.SetPosition(i, new Vector3(x, y, z));
         }
+    }
+
+    /// <summary>Draws a ring from points the caller already placed on the ground.</summary>
+    public static void Circle(LineRenderer line, Vector3[] points, Color color)
+    {
+        line.positionCount = points.Length;
+        line.loop = true;
+        line.startColor = color;
+        line.endColor = color;
+        line.SetPositions(points);
     }
 
     public static void DestroyMaterial()
@@ -61,7 +77,7 @@ internal static class GroundLine
         _material = null;
     }
 
-    static float SurfaceY(float x, float z, float hintY)
+    public static float SurfaceY(float x, float z, float hintY)
     {
         var origin = new Vector3(x, hintY + 12f, z);
         RaycastHit hit;
@@ -90,22 +106,32 @@ internal static class GroundLine
         return _mask;
     }
 
+    /// <summary>
+    /// A vertex-colored, unlit material for the rings. Built-in shaders come first so the look does not depend on
+    /// whichever LineRenderer the game happened to load. Borrowing one is the last resort.
+    /// </summary>
     static Material CreateMaterial()
     {
+        var shader = Shader.Find("Sprites/Default")
+            ?? Shader.Find("Hidden/Internal-Colored")
+            ?? Shader.Find("GUI/Text Shader");
+        if (shader != null)
+        {
+            return new Material(shader);
+        }
+
         var existing = UnityEngine.Object.FindObjectsByType<LineRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         for (var i = 0; i < existing.Length; i++)
         {
             var shared = existing[i].sharedMaterial;
             if (shared != null && shared.shader != null)
             {
+                Plugin.Log.LogWarning("No built-in line shader found. Borrowing the material of " + existing[i].name + " for the highlight.");
                 return new Material(shared);
             }
         }
 
-        var shader = Shader.Find("Sprites/Default")
-            ?? Shader.Find("GUI/Text Shader")
-            ?? Shader.Find("Hidden/Internal-Colored")
-            ?? Shader.Find("Standard");
-        return new Material(shader);
+        Plugin.Log.LogWarning("No line shader found. The highlight may render without color.");
+        return new Material(Shader.Find("Hidden/InternalErrorShader"));
     }
 }

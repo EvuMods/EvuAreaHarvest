@@ -1,14 +1,13 @@
-using System.Collections.Generic;
-using EvuAreaHarvest.Core;
 using UnityEngine;
 
 namespace EvuAreaHarvest;
 
 internal sealed class HarvestHighlight
 {
+    const float ScanInterval = 0.25f;
+
     readonly RangeRing _range;
     readonly HarvestMarkers _markers;
-    readonly List<HarvestTarget> _spots = new List<HarvestTarget>();
     float _nextScan = -1f;
 
     public HarvestHighlight(Transform parent)
@@ -17,7 +16,7 @@ internal sealed class HarvestHighlight
         _markers = new HarvestMarkers(parent);
     }
 
-    public void Tick(Player player, bool show, float range)
+    public void Tick(Player player, bool show, float range, bool pickGuarded)
     {
         if (!show)
         {
@@ -27,23 +26,14 @@ internal sealed class HarvestHighlight
         }
 
         var origin = player.transform.position;
-        if (Time.time >= _nextScan)
+        var scan = Time.time >= _nextScan;
+        if (scan)
         {
-            _spots.Clear();
-            var found = HarvestScan.Collect(origin);
-            for (var i = 0; i < found.Count; i++)
-            {
-                if (HarvestMath.InRange(found[i].Distance, range))
-                {
-                    _spots.Add(found[i]);
-                }
-            }
-
-            _markers.Show(_spots, origin.y);
-            _nextScan = Time.time + 0.25f;
+            _markers.Show(HarvestScan.Collect(origin, range, pickGuarded));
+            _nextScan = Time.time + ScanInterval;
         }
 
-        _range.Show(origin, range);
+        _range.Show(origin, range, scan);
     }
 
     public void Hide()

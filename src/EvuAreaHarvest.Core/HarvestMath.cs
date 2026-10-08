@@ -10,6 +10,11 @@ public static class HarvestMath
 
     public static float ClampRange(float range)
     {
+        if (float.IsNaN(range))
+        {
+            return DefaultRange;
+        }
+
         if (range < MinRange)
         {
             return MinRange;

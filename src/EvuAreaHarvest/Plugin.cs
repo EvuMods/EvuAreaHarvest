@@ -39,17 +39,13 @@ public sealed class Plugin : BaseUnityPlugin
     void Update()
     {
         var player = Player.m_localPlayer;
-        if (Settings == null || player == null)
+        if (player == null)
         {
-            if (_highlight != null)
-            {
-                _highlight.Hide();
-            }
-
+            _highlight.Hide();
             return;
         }
 
-        if (!Typing())
+        if (AcceptsHotkeys(player))
         {
             if (Settings.HarvestArea.Value.IsDown())
             {
@@ -63,13 +59,13 @@ public sealed class Plugin : BaseUnityPlugin
             }
         }
 
-        _highlight.Tick(player, Settings.HighlightHarvestables.Value, HarvestMath.ClampRange(Settings.HarvestRange.Value));
+        _highlight.Tick(player, Settings.HighlightHarvestables.Value, HarvestMath.ClampRange(Settings.HarvestRange.Value), Settings.PickGuarded.Value);
     }
 
     static void HarvestNow(Player player)
     {
         var range = HarvestMath.ClampRange(Settings.HarvestRange.Value);
-        var found = HarvestScan.Collect(player.transform.position);
+        var found = HarvestScan.Collect(player.transform.position, range, Settings.PickGuarded.Value);
         var candidates = new HarvestTally.Candidate[found.Count];
         for (var i = 0; i < found.Count; i++)
         {
@@ -86,18 +82,12 @@ public sealed class Plugin : BaseUnityPlugin
         player.Message(MessageHud.MessageType.Center, line, 0, null, false);
     }
 
-    static bool Typing()
+    /// <summary>
+    /// Same gate Valheim uses for its own keys: no menu, map, inventory, store, console, chat, or text box open,
+    /// and the player is in a state where a hand pick would work.
+    /// </summary>
+    static bool AcceptsHotkeys(Player player)
     {
-        if (Console.instance != null && Console.IsVisible())
-        {
-            return true;
-        }
-
-        if (Chat.instance != null && Chat.instance.HasFocus())
-        {
-            return true;
-        }
-
-        return TextInput.instance != null && TextInput.IsVisible();
+        return player.TakeInput() && !player.IsDead() && !player.InCutscene() && !player.IsTeleporting();
     }
 }

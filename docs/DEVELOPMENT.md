@@ -4,7 +4,8 @@
 
 - `src/EvuAreaHarvest.Core` holds the range clamp, the sphere test, the harvest tally, and the log lines. It targets `netstandard2.0` and does not reference Unity.
 - `src/EvuAreaHarvest` is the BepInEx plugin (`net48`). It reads config, finds pickables, calls Valheim's own pick interaction, and draws the range.
-- A living `Plant` that has not grown into a pickable counts as in range and not ready. A `Pickable` or `PickableItem` is harvested only when Valheim already considers it ready. Wards, respawn timers, and a full inventory stay on that vanilla path.
+- A healthy `Plant` whose grown prefab carries a `Pickable` counts as in range and not ready. Tree saplings, plants that cannot grow where they stand, and anything without a live `ZNetView` (such as the cultivator's placement ghost) are skipped. A `Pickable` or `PickableItem` is harvested only when Valheim already considers it ready. Respawn timers, skills, and stats stay on that vanilla path. `Pickable`s with an aggravate range are skipped unless `Pick guarded items` is on.
+- The hotkeys use `Player.TakeInput()`, the same gate as Valheim's own keys, so the map, menus, and text boxes swallow them.
 - `HarvestMarkers` draws the small rings. That drawing is the piece to replace if the highlight style changes. The range ring is separate.
 
 ## Prerequisites
@@ -50,6 +51,11 @@ There is no automated playtest here. After a harvest or highlight change, confir
 - Ten mushrooms in range, three of them ready, logs `Harvested 3 out of 10 in range`. The same line shows in the center of the screen.
 - No harvestables in range logs `Harvested 0 out of 0 in range`.
 - A dandelion planted under the surface is still harvested.
-- End turns the highlight on and logs `Highlight harvestables on`. The range ring sits under you and pulses. A second ring expands out to the edge. Ready plants get a bright marker. Waiting ones get a dim marker.
+- A berry bush that respawned while you stayed nearby is counted on the second harvest, not only the first.
+- A planted beech sapling is not counted and gets no marker. A carrot seedling is counted and gets a dim marker.
+- Holding the cultivator with a seed selected does not add the placement ghost to the count.
+- With the map or the inventory open, neither key does anything.
+- A Dvergr lantern or chest item in range is left alone and not counted until `Pick guarded items` is on.
+- End turns the highlight on and logs `Highlight harvestables on`. The range ring sits under you and pulses. A second ring expands out to the edge. Ready plants get a bright marker. Waiting ones get a dim marker. Markers uphill and downhill from you sit on their own ground.
 - The highlight and both hotkeys stay as you set them when the server has a different harvest range.
 - With the mod on the server, a client's harvest range follows the server. Without the mod on the server, the client's own range is used.

@@ -5,7 +5,9 @@ Harvest everything in an area with a simple hotkey, even things planted under th
 ## Features
 
 - One key harvests mushrooms, flowers, berries, crops, and the other press-E pickables inside a sphere centered on you. Buried plants are included. The search does not need a clear look at the object.
-- The count includes plants and bushes that are not ready yet. `Harvested 3 out of 10 in range` means 3 were picked and 7 more were in range but waiting.
+- Each pick is the same as a hand pick: the items drop at the plant and you gather them by walking over them.
+- The count includes plants and bushes that are not ready yet. `Harvested 3 out of 10 in range` means 3 were picked and 7 more were in range but waiting. Tree saplings and plants that cannot grow where they stand are not counted.
+- Items that aggravate nearby creatures when taken, such as Dvergr belongings, are left alone unless the server's `Pick guarded items` setting is on.
 - A second key draws the range on the ground and a small marker on each harvestable in that range. Ready ones are bright. Waiting ones are dim.
 - Harvest range can be locked by installing the mod on the server. Hotkeys and the highlight stay on each client.
 

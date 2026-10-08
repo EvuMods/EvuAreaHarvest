@@ -95,6 +95,14 @@ public sealed class HarvestTallyTests
     }
 
     [Fact]
+    public void Range_NaNFallsBackToTheDefault()
+    {
+        Assert.Equal(HarvestMath.DefaultRange, HarvestMath.ClampRange(float.NaN));
+        Assert.Equal(32f, HarvestMath.ClampRange(float.PositiveInfinity));
+        Assert.Equal(2f, HarvestMath.ClampRange(float.NegativeInfinity));
+    }
+
+    [Fact]
     public void Messages_MatchTheLogLines()
     {
         Assert.Equal("Harvested 3 out of 10 in range", HarvestMath.FormatHarvest(3, 10));

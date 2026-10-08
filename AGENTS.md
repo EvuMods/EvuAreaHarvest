@@ -11,7 +11,7 @@ These instructions apply to the EvuAreaHarvest repository.
 
 ## Product Boundary
 
-EvuAreaHarvest harvests press-E pickables inside a sphere centered on the local player. Plants that are not ready yet are counted and not picked. The pick itself is Valheim's `Pickable.Interact` and `PickableItem.Interact`. Wards and respawn stay on that path.
+EvuAreaHarvest harvests press-E pickables inside a sphere centered on the local player. Plants that are not ready yet are counted and not picked; tree saplings and plants that cannot grow are not counted. Pickables that aggravate creatures when taken are skipped unless the synced `Pick guarded items` setting is on. The pick itself is Valheim's `Pickable.Interact` and `PickableItem.Interact`. Respawn, skills, and stats stay on that path.
 
 The mod loads on a dedicated server so the harvest range can sync, and on any client that wants the hotkeys. Other players do not need the mod. The highlight and the hotkeys do not sync. Jotunn is a hard dependency. Configuration Manager is a soft dependency.
 
@@ -26,6 +26,8 @@ The small marker on each harvestable is a stand-in. Replace `HarvestMarkers` whe
 ## Verification
 
 Run `make verify` after code changes. That fetches reference assemblies when needed, builds the solution, and runs the tests.
+
+In-game installs are `make install`, which reads `GALE_PROFILE` from gitignored `.local.mk`.
 
 Do not commit `.refs/`, `bin/`, `obj/`, or `dist/`. Valheim, BepInEx, and Jotunn binaries stay out of git.
 
