@@ -14,9 +14,9 @@
 - `make`, `curl`, `unzip`, and `python3`
 - Either a local Valheim install (`VALHEIM_INSTALL` pointing at the game directory) or SteamCMD, which `scripts/fetch-refs.sh` downloads for you
 
-The script also downloads the BepInEx pack version in `deps/bepinex-pack.version` and the Jotunn version in `deps/jotunn.version`. Assemblies land in `.refs/`, which is gitignored. `BepInEx.AssemblyPublicizer.MSBuild` publicizes `assembly_valheim.dll` during the plugin build.
+The script also downloads the BepInEx pack version in `deps/bepinex-pack.version` and the Jotunn version in `deps/jotunn.version`. Assemblies land in `.refs/`, which is gitignored. Only the Managed DLLs are kept; the server install itself is deleted after the copy. `BepInEx.AssemblyPublicizer.MSBuild` publicizes `assembly_valheim.dll` during the plugin build.
 
-Reference assemblies come from the Valheim dedicated server (Steam app 896660). `VALHEIM_INSTALL` copies from a local client instead.
+Reference assemblies come from the Valheim dedicated server (Steam app 896660). `VALHEIM_INSTALL` copies from a local client instead. When the Steam build id cannot be read, for example offline, the script keeps whatever is already in `.refs/` and says so.
 
 ## Commands
 
@@ -26,9 +26,10 @@ make build
 make test
 make verify
 make package
+make install
 ```
 
-`make verify` is the gate: fetch references if needed, build, and test. `make package` writes `dist/EvuAreaHarvest-<version>.zip` in the Hexium layout: `manifest.json`, `icon.png`, `README.md`, `CHANGELOG.md`, `EvuAreaHarvest.dll`, and `EvuAreaHarvest.Core.dll` all at the zip root. `icon.png` must be 256×256. `version_number` in the packaged manifest is taken from `version.txt`. Jotunn is a manifest dependency. BepInExPack is not; Hexium assumes it and strips that entry on upload.
+`make verify` is the gate: fetch references if needed, build, and test. `make install` reads `GALE_PROFILE` from gitignored `.local.mk` (or the environment) and copies `dist/EvuAreaHarvest/` into `<profile>/BepInEx/plugins/EvuAreaHarvest/`. `.local.mk` holds one line, `GALE_PROFILE := /path/to/gale/valheim/profiles/<name>`. `make package` writes `dist/EvuAreaHarvest-<version>.zip` in the Hexium layout: `manifest.json`, `icon.png`, `README.md`, `CHANGELOG.md`, `EvuAreaHarvest.dll`, and `EvuAreaHarvest.Core.dll` all at the zip root. `icon.png` must be 256×256. `version_number` in the packaged manifest is taken from `version.txt`. Jotunn is a manifest dependency. BepInExPack is not; Hexium assumes it and strips that entry on upload.
 
 The release workflow attaches that zip and the two raw DLLs to the GitHub release. Publishing that release also publishes the same version to Thunderstore. A release created from this workflow does not start other workflows by itself, because it uses `GITHUB_TOKEN`, so release-please dispatches the Thunderstore workflow with the new tag. A release published any other way starts that workflow directly. The manual Action remains: leave the tag empty to package the selected branch, or set a release tag such as `v0.1.0`. It publishes team `EvuMods` to the Valheim community with categories Mods, AI Generated, Tweaks, Client-side, Server-side, and the update slug from the `game_category` input (`deep-north-update` when a release starts it). NSFW is off. The service account token belongs in the `TCLI_AUTH_TOKEN` repository secret, not in the repo.
 

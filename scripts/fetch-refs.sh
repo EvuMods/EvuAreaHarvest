@@ -117,7 +117,10 @@ copy_valheim() {
 fetch_valheim() {
   if [[ -n "${VALHEIM_INSTALL:-}" ]]; then
     local managed
-    managed="$(find_managed "$VALHEIM_INSTALL")"
+    if ! managed="$(find_managed "$VALHEIM_INSTALL")"; then
+      echo "fetch-refs: no assembly_valheim.dll under VALHEIM_INSTALL=${VALHEIM_INSTALL}" >&2
+      exit 1
+    fi
     local buildid="local"
     if [[ -f "$ROOT/.valheim-buildid" ]]; then
       buildid="$(tr -d '[:space:]' < "$ROOT/.valheim-buildid")"
@@ -127,7 +130,14 @@ fetch_valheim() {
   fi
 
   local buildid
-  buildid="$(current_buildid)"
+  if ! buildid="$(current_buildid)"; then
+    if [[ -f "$REFS/Valheim/assembly_valheim.dll" ]]; then
+      echo "fetch-refs: could not read the current Valheim build id; keeping build $(cat "$REFS/valheim.buildid" 2>/dev/null || echo unknown) already in .refs" >&2
+      return
+    fi
+    echo "fetch-refs: could not read the current Valheim build id and .refs has no Valheim assemblies" >&2
+    exit 1
+  fi
   if [[ -f "$REFS/Valheim/assembly_valheim.dll" && "$(cat "$REFS/valheim.buildid" 2>/dev/null || true)" == "$buildid" ]]; then
     return
   fi
@@ -155,6 +165,9 @@ fetch_valheim() {
     set -e
     if managed="$(find_managed "$install")"; then
       copy_valheim "$managed" "$buildid"
+      # Only the Managed DLLs are needed from here on. Dropping the server install keeps
+      # the .refs cache small; a new build id triggers a fresh download anyway.
+      rm -rf "$install"
       return
     fi
     echo "fetch-refs: steamcmd attempt ${attempt} exited ${status}; assembly_valheim.dll was not found under ${install}" >&2
