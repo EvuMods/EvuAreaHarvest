@@ -44,17 +44,20 @@ internal static class HarvestScan
 
     static readonly Dictionary<int, bool> GrowsIntoPickable = new Dictionary<int, bool>();
     static readonly Dictionary<int, PrefabKind> PrefabKinds = new Dictionary<int, PrefabKind>();
+    static readonly HashSet<uint> SeenSlots = new HashSet<uint>();
 
     /// <summary>
     /// Everything inside <paramref name="range"/> of <paramref name="origin"/> that is, or will become, a pickable.
-    /// Walks Valheim's live instance registry. <paramref name="visited"/> is how many instances were considered.
+    /// Reads the zone sectors the sphere can touch. <paramref name="visited"/> is how many objects were considered.
     /// </summary>
     public static List<HarvestTarget> Collect(Vector3 origin, float range, bool pickGuarded, out int visited)
     {
         var found = new List<HarvestTarget>();
         visited = 0;
+        SeenSlots.Clear();
         var scene = ZNetScene.instance;
-        if (scene == null)
+        var sectors = ZDOMan.instance;
+        if (scene == null || sectors == null || sectors.m_objectsBySector == null)
         {
             return found;
         }
@@ -62,33 +65,58 @@ internal static class HarvestScan
         var rangeSqr = range * range;
         var coarse = range + 2f;
         var coarseSqr = coarse * coarse;
-        foreach (var pair in scene.m_instances)
+        var lists = sectors.m_objectsBySector;
+        var min = ZoneSystem.GetZone(origin - new Vector3(coarse, 0f, coarse));
+        var max = ZoneSystem.GetZone(origin + new Vector3(coarse, 0f, coarse));
+        for (var z = min.y; z <= max.y; z++)
         {
-            visited++;
-            var view = pair.Value;
-            var zdo = pair.Key;
-            if (view == null || zdo == null || !view.IsValid())
+            for (var x = min.x; x <= max.x; x++)
             {
-                continue;
-            }
+                var slot = ZoneSystem.SectorToIndex(new Vector2s(x, z)).Sector;
+                if (slot >= (uint)lists.Length || !SeenSlots.Add(slot))
+                {
+                    continue;
+                }
 
-            var rough = zdo.GetPosition() - origin;
-            if (rough.sqrMagnitude > coarseSqr)
-            {
-                continue;
-            }
+                var bucket = lists[slot];
+                if (bucket == null)
+                {
+                    continue;
+                }
 
-            switch (Kind(scene, zdo.GetPrefab()))
-            {
-                case PrefabKind.Pickable:
-                    ConsiderPickable(view, origin, rangeSqr, pickGuarded, found);
-                    break;
-                case PrefabKind.PickableItem:
-                    ConsiderItem(view, origin, rangeSqr, found);
-                    break;
-                case PrefabKind.Plant:
-                    ConsiderPlant(view, origin, rangeSqr, found);
-                    break;
+                for (var i = 0; i < bucket.Count; i++)
+                {
+                    visited++;
+                    var zdo = bucket[i];
+                    if (zdo == null)
+                    {
+                        continue;
+                    }
+
+                    var rough = zdo.GetPosition() - origin;
+                    if (rough.sqrMagnitude > coarseSqr)
+                    {
+                        continue;
+                    }
+
+                    if (!scene.m_instances.TryGetValue(zdo, out var view) || view == null || !view.IsValid())
+                    {
+                        continue;
+                    }
+
+                    switch (Kind(scene, zdo.GetPrefab()))
+                    {
+                        case PrefabKind.Pickable:
+                            ConsiderPickable(view, origin, rangeSqr, pickGuarded, found);
+                            break;
+                        case PrefabKind.PickableItem:
+                            ConsiderItem(view, origin, rangeSqr, found);
+                            break;
+                        case PrefabKind.Plant:
+                            ConsiderPlant(view, origin, rangeSqr, found);
+                            break;
+                    }
+                }
             }
         }
 

@@ -26,6 +26,10 @@
       <Private>false</Private>
       <Publicize>true</Publicize>
     </Reference>
+    <Reference Include="assembly_utils">
+      <HintPath>$(ValheimManaged)/assembly_utils.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>$(ValheimManaged)/UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
