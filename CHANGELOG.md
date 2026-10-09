@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.2](https://github.com/EvuMods/EvuAreaHarvest/compare/v0.2.1...v0.2.2) (2026-10-09)
+
+
+### Bug Fixes
+
+* **ci:** let the Valheim rebuild release automerge past the merge commit ([bdad9b1](https://github.com/EvuMods/EvuAreaHarvest/commit/bdad9b188832d6ccb5c48313b411842dcb1095e4))
+* count respawned pickables and skip saplings, ghosts, and guarded items ([d826422](https://github.com/EvuMods/EvuAreaHarvest/commit/d82642284cc8505c364f0aa6fd307796e87b6b23))
+* keep the highlight scan off the whole loaded world ([feb8f1d](https://github.com/EvuMods/EvuAreaHarvest/commit/feb8f1dd9d0924bbf3a32bee0e9bd2f3c2c05a82))
+* scan only the zones the harvest sphere can touch ([2e5e025](https://github.com/EvuMods/EvuAreaHarvest/commit/2e5e025974944c5bb5bee455bbd4fe6b34a88a99))
+
 ## [0.2.1](https://github.com/EvuMods/EvuAreaHarvest/compare/v0.2.0...v0.2.1) (2026-10-06)
 
 
