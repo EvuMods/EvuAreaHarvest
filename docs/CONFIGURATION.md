@@ -20,5 +20,6 @@ These stay on the client. They have no S button.
 | Highlight harvestables | Off | When on, draws the range on the ground and a marker on each harvestable in range. |
 | Harvest area | Numpad Delete | Key that harvests everything in range. Unity calls numpad Delete KeypadPeriod. |
 | Toggle highlight | End | Key that shows or hides the range ring and the harvestable markers. |
+| Log highlight timings | Off | When on, logs once per second how long the highlight scan, markers, and range ring took. |
 
 Both keys are ignored while a menu, the map, the inventory, a store, the console, chat, or a text box is open, and while you are dead, teleporting, or in a cutscene.

@@ -5,13 +5,11 @@ namespace EvuAreaHarvest;
 internal sealed class RangeRing
 {
     const int Segments = 64;
-    const float MoveTolerance = 0.05f;
 
     readonly LineRenderer _edge;
     readonly LineRenderer _ripple;
     readonly float[] _edgeY = new float[Segments];
     readonly Vector3[] _points = new Vector3[Segments];
-    Vector3 _cachedCenter;
     float _cachedRange = -1f;
     float _centerY;
 
@@ -29,12 +27,12 @@ internal sealed class RangeRing
     }
 
     /// <summary>
-    /// Draws the range edge and the ripple. Ground heights are sampled only when <paramref name="refresh"/> is set,
-    /// the player moved, or the range changed, so an idle frame costs no raycasts.
+    /// Draws the range edge and the ripple. Ground heights are sampled on the scan tick and when the range changes.
+    /// Between samples the ring follows the player using the last heights, so a moving frame does no raycasts.
     /// </summary>
     public void Show(Vector3 center, float range, bool refresh)
     {
-        if (refresh || !Mathf.Approximately(range, _cachedRange) || (center - _cachedCenter).sqrMagnitude > MoveTolerance * MoveTolerance)
+        if (refresh || !Mathf.Approximately(range, _cachedRange))
         {
             Sample(center, range);
         }
@@ -44,13 +42,20 @@ internal sealed class RangeRing
         GroundLine.Circle(_edge, _points, new Color(0.95f, 0.78f, 0.15f, 0.9f));
 
         var repeat = Mathf.Repeat(Time.time / 1.5f, 1f);
-        Fill(center, range * repeat, repeat);
-        GroundLine.Circle(_ripple, _points, new Color(0.95f, 0.82f, 0.25f, (1f - repeat) * 0.75f));
+        var rippleRadius = range * repeat;
+        if (rippleRadius <= 0.05f)
+        {
+            _ripple.positionCount = 0;
+        }
+        else
+        {
+            Fill(center, rippleRadius, repeat);
+            GroundLine.Circle(_ripple, _points, new Color(0.95f, 0.82f, 0.25f, (1f - repeat) * 0.75f));
+        }
     }
 
     void Sample(Vector3 center, float range)
     {
-        _cachedCenter = center;
         _cachedRange = range;
         _centerY = GroundLine.SurfaceY(center.x, center.z, center.y);
         for (var i = 0; i < Segments; i++)

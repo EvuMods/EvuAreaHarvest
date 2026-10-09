@@ -34,84 +34,167 @@ internal static class HarvestScan
     /// Whether a grown prefab of a <see cref="Plant"/> turns into something this mod can pick.
     /// Tree saplings grow into trees, so they are not harvestables waiting.
     /// </summary>
-    static readonly Dictionary<GameObject, bool> GrowsIntoPickable = new Dictionary<GameObject, bool>();
+    enum PrefabKind
+    {
+        None,
+        Pickable,
+        PickableItem,
+        Plant,
+    }
+
+    static readonly Dictionary<int, bool> GrowsIntoPickable = new Dictionary<int, bool>();
+    static readonly Dictionary<int, PrefabKind> PrefabKinds = new Dictionary<int, PrefabKind>();
 
     /// <summary>
     /// Everything inside <paramref name="range"/> of <paramref name="origin"/> that is, or will become, a pickable.
-    /// Objects without a live ZNetView (placement ghosts, prefabs that are not in the world) are skipped.
+    /// Walks Valheim's live instance registry. <paramref name="visited"/> is how many instances were considered.
     /// </summary>
-    public static List<HarvestTarget> Collect(Vector3 origin, float range, bool pickGuarded)
+    public static List<HarvestTarget> Collect(Vector3 origin, float range, bool pickGuarded, out int visited)
     {
         var found = new List<HarvestTarget>();
+        visited = 0;
+        var scene = ZNetScene.instance;
+        if (scene == null)
+        {
+            return found;
+        }
+
         var rangeSqr = range * range;
-
-        foreach (var pickable in UnityEngine.Object.FindObjectsByType<Pickable>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+        var coarse = range + 2f;
+        var coarseSqr = coarse * coarse;
+        foreach (var pair in scene.m_instances)
         {
-            if (pickable == null || pickable.m_itemPrefab == null || !Live(pickable.m_nview) || pickable.m_enabled == 0)
+            visited++;
+            var view = pair.Value;
+            var zdo = pair.Key;
+            if (view == null || zdo == null || !view.IsValid())
             {
                 continue;
             }
 
-            if (!pickGuarded && pickable.m_aggravateRange > 0f)
+            var rough = zdo.GetPosition() - origin;
+            if (rough.sqrMagnitude > coarseSqr)
             {
                 continue;
             }
 
-            var position = pickable.transform.position;
-            var offset = position - origin;
-            if (offset.sqrMagnitude > rangeSqr)
+            switch (Kind(scene, zdo.GetPrefab()))
             {
-                continue;
+                case PrefabKind.Pickable:
+                    ConsiderPickable(view, origin, rangeSqr, pickGuarded, found);
+                    break;
+                case PrefabKind.PickableItem:
+                    ConsiderItem(view, origin, rangeSqr, found);
+                    break;
+                case PrefabKind.Plant:
+                    ConsiderPlant(view, origin, rangeSqr, found);
+                    break;
             }
-
-            var captured = pickable;
-            found.Add(new HarvestTarget(
-                position,
-                offset.magnitude,
-                Ready(captured),
-                player => TryPick(captured, player)));
-        }
-
-        foreach (var item in UnityEngine.Object.FindObjectsByType<PickableItem>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
-        {
-            if (item == null || item.m_itemPrefab == null || !Live(item.m_nview))
-            {
-                continue;
-            }
-
-            var position = item.transform.position;
-            var offset = position - origin;
-            if (offset.sqrMagnitude > rangeSqr)
-            {
-                continue;
-            }
-
-            var captured = item;
-            found.Add(new HarvestTarget(
-                position,
-                offset.magnitude,
-                !item.m_picked,
-                player => TryPickItem(captured, player)));
-        }
-
-        foreach (var plant in UnityEngine.Object.FindObjectsByType<Plant>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
-        {
-            if (plant == null || !Live(plant.m_nview) || plant.m_status != Plant.Status.Healthy || !WillBePickable(plant))
-            {
-                continue;
-            }
-
-            var position = plant.transform.position;
-            var offset = position - origin;
-            if (offset.sqrMagnitude > rangeSqr)
-            {
-                continue;
-            }
-
-            found.Add(new HarvestTarget(position, offset.magnitude, false, null));
         }
 
         return found;
+    }
+
+    static PrefabKind Kind(ZNetScene scene, int hash)
+    {
+        if (PrefabKinds.TryGetValue(hash, out var kind))
+        {
+            return kind;
+        }
+
+        var prefab = scene.GetPrefab(hash);
+        if (prefab == null)
+        {
+            kind = PrefabKind.None;
+        }
+        else if (prefab.GetComponentInChildren<Pickable>(true) != null)
+        {
+            kind = PrefabKind.Pickable;
+        }
+        else if (prefab.GetComponentInChildren<PickableItem>(true) != null)
+        {
+            kind = PrefabKind.PickableItem;
+        }
+        else if (prefab.GetComponentInChildren<Plant>(true) != null)
+        {
+            kind = PrefabKind.Plant;
+        }
+        else
+        {
+            kind = PrefabKind.None;
+        }
+
+        PrefabKinds[hash] = kind;
+        return kind;
+    }
+
+    static void ConsiderPickable(ZNetView view, Vector3 origin, float rangeSqr, bool pickGuarded, List<HarvestTarget> found)
+    {
+        var pickable = view.GetComponent<Pickable>();
+        if (pickable == null || pickable.m_itemPrefab == null || pickable.m_enabled == 0)
+        {
+            return;
+        }
+
+        if (!pickGuarded && pickable.m_aggravateRange > 0f)
+        {
+            return;
+        }
+
+        var position = pickable.transform.position;
+        var offset = position - origin;
+        if (offset.sqrMagnitude > rangeSqr)
+        {
+            return;
+        }
+
+        var captured = pickable;
+        found.Add(new HarvestTarget(
+            position,
+            offset.magnitude,
+            Ready(captured),
+            player => TryPick(captured, player)));
+    }
+
+    static void ConsiderItem(ZNetView view, Vector3 origin, float rangeSqr, List<HarvestTarget> found)
+    {
+        var item = view.GetComponent<PickableItem>();
+        if (item == null || item.m_itemPrefab == null)
+        {
+            return;
+        }
+
+        var position = item.transform.position;
+        var offset = position - origin;
+        if (offset.sqrMagnitude > rangeSqr)
+        {
+            return;
+        }
+
+        var captured = item;
+        found.Add(new HarvestTarget(
+            position,
+            offset.magnitude,
+            !item.m_picked,
+            player => TryPickItem(captured, player)));
+    }
+
+    static void ConsiderPlant(ZNetView view, Vector3 origin, float rangeSqr, List<HarvestTarget> found)
+    {
+        var plant = view.GetComponent<Plant>();
+        if (plant == null || plant.m_status != Plant.Status.Healthy || !WillBePickable(plant))
+        {
+            return;
+        }
+
+        var position = plant.transform.position;
+        var offset = position - origin;
+        if (offset.sqrMagnitude > rangeSqr)
+        {
+            return;
+        }
+
+        found.Add(new HarvestTarget(position, offset.magnitude, false, null));
     }
 
     static bool Live(ZNetView? view)
@@ -135,10 +218,11 @@ internal static class HarvestScan
                 continue;
             }
 
-            if (!GrowsIntoPickable.TryGetValue(prefab, out var grows))
+            var id = prefab.GetInstanceID();
+            if (!GrowsIntoPickable.TryGetValue(id, out var grows))
             {
                 grows = prefab.GetComponentInChildren<Pickable>(true) != null;
-                GrowsIntoPickable[prefab] = grows;
+                GrowsIntoPickable[id] = grows;
             }
 
             if (grows)

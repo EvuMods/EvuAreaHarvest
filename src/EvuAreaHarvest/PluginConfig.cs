@@ -51,6 +51,14 @@ internal sealed class PluginConfig
                 "Key that shows or hides the range ring and the harvestable markers.",
                 null,
                 ConfigHints.Local(70)));
+        LogHighlightTimings = config.Bind(
+            "Local",
+            "Log highlight timings",
+            false,
+            new ConfigDescription(
+                "When on, logs once per second how long the highlight scan, markers, and range ring took.",
+                null,
+                ConfigHints.Local(60)));
     }
 
     public ConfigEntry<float> HarvestRange { get; }
@@ -62,6 +70,8 @@ internal sealed class PluginConfig
     public ConfigEntry<KeyboardShortcut> HarvestArea { get; }
 
     public ConfigEntry<KeyboardShortcut> ToggleHighlight { get; }
+
+    public ConfigEntry<bool> LogHighlightTimings { get; }
 }
 
 static class ConfigHints

@@ -41,7 +41,7 @@ public sealed class Plugin : BaseUnityPlugin
         var player = Player.m_localPlayer;
         if (player == null)
         {
-            _highlight.Hide();
+            _highlight.Tick(null!, false, 0f, false);
             return;
         }
 
@@ -65,7 +65,7 @@ public sealed class Plugin : BaseUnityPlugin
     static void HarvestNow(Player player)
     {
         var range = HarvestMath.ClampRange(Settings.HarvestRange.Value);
-        var found = HarvestScan.Collect(player.transform.position, range, Settings.PickGuarded.Value);
+        var found = HarvestScan.Collect(player.transform.position, range, Settings.PickGuarded.Value, out _);
         var candidates = new HarvestTally.Candidate[found.Count];
         for (var i = 0; i < found.Count; i++)
         {
