@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/EvuMods/EvuAreaHarvest/compare/v0.2.3...v0.2.4) (2026-10-15)
+
+
+### Bug Fixes
+
+* **ci:** record each Valheim rebuild once ([3765922](https://github.com/EvuMods/EvuAreaHarvest/commit/3765922550924a7bf5987de3144b4fccf61071d6))
+
 ## [0.2.3](https://github.com/EvuMods/EvuAreaHarvest/compare/v0.2.2...v0.2.3) (2026-10-15)
 
 
