@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.3](https://github.com/EvuMods/EvuAreaHarvest/compare/v0.2.2...v0.2.3) (2026-10-15)
+
+
+### Bug Fixes
+
+* rebuild against Valheim 25909431 ([f88d2c6](https://github.com/EvuMods/EvuAreaHarvest/commit/f88d2c67a852f7442c9c7283de1c885539a994c3))
+* rebuild against Valheim 25909431 ([a5214cc](https://github.com/EvuMods/EvuAreaHarvest/commit/a5214cc176e0c34665bd1cc390bffa81d8e4ec33))
+
 ## [0.2.2](https://github.com/EvuMods/EvuAreaHarvest/compare/v0.2.1...v0.2.2) (2026-10-09)
 
 
